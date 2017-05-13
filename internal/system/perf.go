@@ -6,42 +6,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func NewProcessInstructionCounter() (*Counter, error) {
+func NewProcessInstructionCounter(pid int, gname string) (*Counter, error) {
 	name := "linux_perf_cpu_instructions_total"
+	var labels prometheus.Labels
+	if gname != "" {
+		name = "linux_perf_goroutine_cpu_instructions_total"
+		labels = prometheus.Labels{"goroutine": gname}
+	}
 	help := "count of instructions despatched since process start"
 
-	fd, err := newProcessEventCounter(perfTypeHardware, perfCountHWInstructions)
-	if err != nil {
-		return nil, err
-	}
-	return &Counter{
-		fd:   fd,
-		desc: prometheus.NewDesc(name, help, nil, nil),
-	}, nil
-}
-
-func NewProcessCyclesCounter() (*Counter, error) {
-	name := "linux_perf_cpu_cycles_total"
-	help := "count of cpu cycles since process start"
-
-	fd, err := newProcessEventCounter(perfTypeHardware, perfCountHWCPUCycles)
-	if err != nil {
-		return nil, err
-	}
-	return &Counter{
-		fd:   fd,
-		desc: prometheus.NewDesc(name, help, nil, nil),
-	}, nil
-}
-
-func NewProcessLLCMissLoadCounter() (*Counter, error) {
-	name := "linux_perf_cache_miss_total"
-	help := "count of cache misses since process start"
-	labels := prometheus.Labels{"op": "load"}
-
-	fd, err := newProcessEventCounter(
-		perfTypeHHCache,
-		perfCountHWCacheLL*perfCountHWCacheResultMiss*perfCountHWCacheOpRead)
+	fd, err := newProcessEventCounter(perfTypeHardware, perfCountHWInstructions, pid)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +25,58 @@ func NewProcessLLCMissLoadCounter() (*Counter, error) {
 	}, nil
 }
 
-func NewProcessLLCMissStoreCounter() (*Counter, error) {
+func NewProcessCyclesCounter(pid int, gname string) (*Counter, error) {
+	name := "linux_perf_cpu_cycles_total"
+	var labels prometheus.Labels
+	if gname != "" {
+		name = "linux_perf_goroutine_cpu_cycles_total"
+		labels = prometheus.Labels{"goroutine": gname}
+	}
+	help := "count of cpu cycles since process start"
+
+	fd, err := newProcessEventCounter(perfTypeHardware, perfCountHWCPUCycles, pid)
+	if err != nil {
+		return nil, err
+	}
+	return &Counter{
+		fd:   fd,
+		desc: prometheus.NewDesc(name, help, nil, labels),
+	}, nil
+}
+
+func NewProcessLLCMissLoadCounter(pid int, gname string) (*Counter, error) {
 	name := "linux_perf_cache_miss_total"
+	labels := prometheus.Labels{"op": "load"}
+	if gname != "" {
+		name = "linux_perf_goroutine_cache_miss_total"
+		labels["goroutine"] = gname
+	}
 	help := "count of cache misses since process start"
-	labels := prometheus.Labels{"op": "store"}
 
 	fd, err := newProcessEventCounter(
 		perfTypeHHCache,
-		perfCountHWCacheLL*perfCountHWCacheResultMiss*perfCountHWCacheOpWrite)
+		perfCountHWCacheLL*perfCountHWCacheResultMiss*perfCountHWCacheOpRead, pid)
+	if err != nil {
+		return nil, err
+	}
+	return &Counter{
+		fd:   fd,
+		desc: prometheus.NewDesc(name, help, nil, labels),
+	}, nil
+}
+
+func NewProcessLLCMissStoreCounter(pid int, gname string) (*Counter, error) {
+	name := "linux_perf_cache_miss_total"
+	labels := prometheus.Labels{"op": "store"}
+	if gname != "" {
+		name = "linux_perf_goroutine_cache_miss_total"
+		labels["goroutine"] = gname
+	}
+	help := "count of cache misses since process start"
+
+	fd, err := newProcessEventCounter(
+		perfTypeHHCache,
+		perfCountHWCacheLL*perfCountHWCacheResultMiss*perfCountHWCacheOpWrite, pid)
 	if err != nil {
 		return nil, err
 	}

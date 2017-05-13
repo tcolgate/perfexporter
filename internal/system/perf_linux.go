@@ -44,23 +44,21 @@ func (c *Counter) read() (float64, error) {
 	return float64(v.Count), err
 }
 
-func newProcessEventCounter(evtype uint32, ev uint64) (*os.File, error) {
+func newProcessEventCounter(evtype uint32, ev uint64, pid int) (*os.File, error) {
 	attrs := &perfEventAttr{
 		Type:   evtype,
 		Config: ev,
 		Flags:  perfFlagExcludeKernel | perfFlagExcludeHv | perfFlagExcludeIdle,
 	}
-	fd, err := perfProcessEventOpen(attrs)
+	fd, err := perfProcessEventOpen(attrs, pid)
 	if err != nil {
 		return nil, err
 	}
 	return fd, nil
 }
 
-func perfProcessEventOpen(a *perfEventAttr) (*os.File, error) {
-	pid := int64(syscall.Getpid())
-
-	return perfEventOpen(a, pid, -1, -1, 0)
+func perfProcessEventOpen(a *perfEventAttr, pid int) (*os.File, error) {
+	return perfEventOpen(a, int64(pid), -1, -1, 0)
 }
 
 func perfEventOpen(a *perfEventAttr, pid, cpu, groupFD int64, fdFlags uint64) (*os.File, error) {

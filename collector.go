@@ -1,6 +1,9 @@
 package perfexporter
 
 import (
+	"runtime"
+	"syscall"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tcolgate/perfexporter/internal/system"
 )
@@ -13,10 +16,29 @@ func init() {
 type perfCollector []*system.Counter
 
 func NewPerfCollector() prometheus.Collector {
-	c1, _ := system.NewProcessCyclesCounter()
-	c2, _ := system.NewProcessInstructionCounter()
-	c3, _ := system.NewProcessLLCMissLoadCounter()
-	c4, _ := system.NewProcessLLCMissStoreCounter()
+	return newPerfCollector("")
+}
+
+func MustRegisterGoRoutineLocalCollector(name string) {
+	c := newPerfCollector(name)
+	prometheus.MustRegister(c)
+}
+
+func NewGoRoutineLocalCollector(name string) prometheus.Collector {
+	return newPerfCollector(name)
+}
+
+func newPerfCollector(gname string) prometheus.Collector {
+	pid := syscall.Getpid()
+	if gname != "" {
+		runtime.LockOSThread()
+		pid = syscall.Gettid()
+	}
+
+	c1, _ := system.NewProcessCyclesCounter(pid)
+	c2, _ := system.NewProcessInstructionCounter(pid)
+	c3, _ := system.NewProcessLLCMissLoadCounter(pid)
+	c4, _ := system.NewProcessLLCMissStoreCounter(pid)
 
 	return perfCollector{c1, c2, c3, c4}
 }
